@@ -1,0 +1,7 @@
+services:
+  homelab-api:
+    build: .
+    container_name: homelab-api
+    ports:
+      - "5000:5000"
+    restart: unless-stopped

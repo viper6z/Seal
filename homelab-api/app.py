@@ -3,15 +3,18 @@ import datetime as dt
 
 
 app = Flask(__name__)
+START = time.monotonic()
 
 @app.route("/")
 def welcome():
     return "Welcome to my homelab API!"
 
 @app.route("/time")
-def timeSinceStart():
+def uptime():
+    seconds = time.monotic() - START
     return jsonify({
-        "time": dt.datetime.now().isoformat()
+        "uptime_seconds": round(seconds, 1),
+        "uptime_human": str(timedelta(seconds=int(seconds)))
     })
 
 if __name__ == "__main__":
