@@ -11,7 +11,7 @@ def welcome():
 
 @app.route("/time")
 def uptime():
-    seconds = time.monotic() - START
+    seconds = time.monotonic() - START
     return jsonify({
         "uptime_seconds": round(seconds, 1),
         "uptime_human": str(timedelta(seconds=int(seconds)))
