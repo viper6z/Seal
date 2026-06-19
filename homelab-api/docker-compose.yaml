@@ -7,3 +7,8 @@ services:
     restart: unless-stopped
     networks:
       - proxy
+    labels:
+      - "traefik.enable = true"
+      - "traefik.http.routers.homelab-api.rule=Host(`api.lab.home`)"
+      - "traefik.http.routers.homelab-api.entrypoints=web"
+      - "traefik.http.services.homelab-api.loadbalancer.server.port=5000"
