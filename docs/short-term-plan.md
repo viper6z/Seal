@@ -1,8 +1,9 @@
-finish UDP + networking failure lab
-→ do a short AWS foundations pass on your current EC2 setup
-→ start Terraform
-→ create a separate Terraform-managed AWS sandbox:
-   VPC + subnet + route table + internet gateway
-   security group + EC2
-→ destroy and recreate it
-→ later add GitHub Actions and PR-based checks
+Start terraform phase:
+
+use terraform to declare my server config, keep it in git, with plan and apply
+
+make own VPC
+
+first working flow will be terraform makes vm, i SSH working
+
+local state file

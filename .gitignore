@@ -1,2 +1,14 @@
-.env
-etc-pihole/
+# Terraform local provider/plugin cache
+terraform/.terraform/
+
+# Local Terraform state
+terraform/*.tfstate
+terraform/*.tfstate.*
+
+# Terraform crash logs
+terraform/crash.log
+terraform/crash.*.log
+
+# Variable files may contain secrets
+terraform/*.tfvars
+terraform/*.tfvars.json
