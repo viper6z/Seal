@@ -27,11 +27,18 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.micro"
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.main.id
+  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+  key_name               = aws_key_pair.homelab.key_name
 
   tags = {
-    Name = "oskar-terraform"
+    Name = "oskar-terraform-server"
   }
 }
 
+resource "aws_key_pair" "homelab" {
+  key_name   = "homelab-ec2"
+  public_key = file("${path.module}/keys/homelab-ec2.pub")
+}
