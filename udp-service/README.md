@@ -1,9 +1,15 @@
-**UDP live text relay**
+## UDP live-text synchronization
 
-A small custom application-layer protocol built on UDP.
+Two independently running UDP client sockets subscribe to a stateful UDP server.
+Each keystroke update is sent as an `UPDATE <text>` datagram. The server assigns
+a monotonically increasing sequence number and broadcasts `TEXT <sequence> <text>`
+to every subscribed client.
 
-Clients keep a local `current_text` value and send the latest version to the server. The server relays the newest text to all subscribed listeners, including the sender.
+![UDP live-text demo](docs/udp-live-demo.gif)
 
+The packet capture uses `tcpdump -i any`, so Docker virtual-network traffic can
+appear twice as it crosses both ends of a virtual interface. The application sends
+one broadcast datagram per subscribed UDP endpoint.
 **Protocol**
 
 Transport: UDP
