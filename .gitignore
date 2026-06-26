@@ -12,3 +12,5 @@ terraform/crash.*.log
 # Variable files may contain secrets
 terraform/*.tfvars
 terraform/*.tfvars.json
+
+.env
