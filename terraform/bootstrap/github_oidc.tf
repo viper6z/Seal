@@ -4,18 +4,29 @@
 module "github-oidc-provider" {
   source  = "terraform-module/github-oidc-provider/aws"
   version = "2.2.2"
+
   create_oidc_provider = true
-  create_oidc_role     = false
+  create_oidc_role     = true
+
+  role_name = "homelab_cd_terraform"
+
+  repositories = [
+    "viper6z/homelab:ref:refs/heads/main"
+  ]
+
+  oidc_role_attach_policies = [
+    aws_iam_policy.cd_identity.arn
+  ]
 }
 
-data "aws_iam_policy_document" "plan_identity" {
+data "aws_iam_policy_document" "cd_identity" {
   statement {
-    actions = ["ec2:Describe*"]
+    actions   = ["ec2:*"]
     resources = ["*"]
   }
 
   statement {
-    actions = ["s3:ListBucket"]
+    actions   = ["s3:ListBucket"]
     resources = ["arn:aws:s3:::homelab-tfstate-bucket-1337"]
   }
 
@@ -35,5 +46,10 @@ data "aws_iam_policy_document" "plan_identity" {
     ]
     resources = ["arn:aws:s3:::homelab-tfstate-bucket-1337/homelab/main/terraform.tfstate.tflock"]
   }
+}
+
+resource "aws_iam_policy" "cd_identity" {
+  name   = "homelab-terraform-cd"
+  policy = data.aws_iam_policy_document.cd_identity.json
 }
 
