@@ -43,6 +43,9 @@ jobs:
       - name: install ansible
         run: python3 -m pip install ansible-core
 
+      - name: install requirements galaxy
+        run: ansible-galaxy collection install -r requirements.yml 
+
       - name: ansible syntax check
         run: ansible-playbook -i inventory.ini playbook.yaml --syntax-check
 
