@@ -1352,3 +1352,29 @@ I could use docker cp, which supports copying a host file into the running conta
 What i am going to do is instead of mounting a specific file im going to mount the config directory. So that the path will resolve to the current one very time.
 
 Put the nginx config in its own sub directory and mounted that in the compose file and now it works.
+
+**Entry 18**
+Now its time to work on the public ingress through AWS to the machine. We want to change the inbound rules on the security group attached to the ec2 instance.
+
+THis is the plan: 
+Current:
+security group called “allow SSH”
+→ port 22 from your IP
+→ all outbound
+
+New:
+security group representing the Seal host
+→ port 80 from anywhere
+→ no inbound SSH
+→ all outbound stays
+
+It seems like changing the name and stuff of a security group can be quite complicated with how terraform handles it. These are apparently immutable properties so changing this will lead to terraform having to replace the whole security group, not the end of the world though the only headache is you need to make sure you update the resources that attach to the security group so they reattach to the new one.
+
+The replacement is hanging. I got this error:
+│ Error: deleting Security Group (sg-06969b19f147c7522): operation error EC2: DeleteSecurityGroup, https response error StatusCode: 400, RequestID: aed36be9-0728-4aba-a19b-45213abf7259, api error DependencyViolation: resource sg-06969b19f147c7522 has a dependent object
+
+im going to add the lifecycle create before destroy = true so that we make the new security group before destroying the old one. then we can move the VM before deleting the old SG because we cant delete it as long as it has dependent resources.
+
+With the new security group, i can reach my VM through my browser with http! and i can go through nginx to reach my exposed api endpoints!
+http://13.51.193.197/health returns the json response
+http://13.51.193.197/random (not a real endpoint/exposed) returns nginx 404, so it doesnt even reach the API. 
