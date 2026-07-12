@@ -14,3 +14,6 @@ crash.*.log
 *.tfvars.json
 
 .env
+
+interface/interface 
+interface/seal
