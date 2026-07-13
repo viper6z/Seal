@@ -87,11 +87,20 @@ func validateApplication(application Application) (error) {
 		return errors.New("Name can't be empty")
 	}
 
-	}
-	if application.Image == "" || !strings.HasPrefix(application.Image, "ghcr.io") {
+	if application.Image == "" || !strings.HasPrefix(application.Image, "ghcr.io/") {
 		return errors.New("Image needs to be non empty and in viper6z ghcr")
 	}
 	
+	for _, rune := range application.Name {
+		if !(rune >= 'a' && rune <= 'z') && !(rune >= '0' && rune <= '9') && !(rune == '-') {
+			return errors.New("name must only include letters in a-z, numbers in 0-9, and -")
+		}
+	}
+	
+	if application.Name[0] == '-' || application.Name[len(application.Name) - 1] == '-' {
+		return errors.New("no leading or trailing hyphens allowed in name")
+	}
+
 	if application.InternalPort < 1 || application.InternalPort > 65535 {
 		return errors.New("internal_port must be a number between 1 and 65535")
 	}
@@ -106,6 +115,22 @@ func validateApplication(application Application) (error) {
 
 	if application.ExposureType == "public" && len(application.AllowedPublicRoutes) == 0 {
 		return errors.New("public apps need atleast 1 public route")
+	}
+
+	for _, s := range application.AllowedPublicRoutes {
+		if !(strings.HasPrefix(s, "/")) {
+			return errors.New("all public routes must start with /")
+		}
+	}
+
+	m := make(map[string]bool)
+	for _, s:= range application.AllowedPublicRoutes {
+		_, ok := m[s]
+		if ok == false {
+			m[s] = true
+		} else {
+			return errors.New("no duplicate routes allowed")
+		}
 	}
 	
 	return nil
