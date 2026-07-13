@@ -1,4 +1,4 @@
-name: "1"
+name: "new"
 image: "ghcr.io/viper6z/pung"
 internal_port: 5000
 exposure_type: public
