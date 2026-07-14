@@ -1406,3 +1406,50 @@ Created the Application struct with YAML field mappings, then separated file ope
 Also clarified Go concepts around zero values, pointers, interfaces, methods, package functions, and multiple return values.
 
 The parser now compiles up to the missing CLI entry point. Next step is connecting argument handling, file ownership, decoding, and visible error reporting through main.
+
+Entry 22
+
+Continued building the Go interface for Seal and got the first full deployment transformation working.
+
+Finished the CLI entry point so Seal now supports:
+
+seal validate <manifest>
+seal deploy <manifest>
+
+The program checks the arguments, loads the manifest, validates it and exits with clear error messages and status codes when something fails.
+
+Built out the manifest validation rules. Seal now checks that the application has a name and image, that the image comes from GHCR, that names only contain valid lowercase characters, that ports are valid, and that the exposure type and public routes make sense. Internal apps cannot declare public routes, while public apps need at least one route.
+
+Added support for reading the existing compose.yaml into a typed Go structure. The top-level services and networks fields are typed, while the existing service definitions are stored as yaml.Node values so Seal does not need to understand every possible Docker Compose field.
+
+Added deployment prechecks before changing anything. Seal now rejects an application when the service name already exists or when the platform’s required backend Docker network is missing.
+
+Created the generated service model. An application manifest is converted into a Docker Compose service using the declared image, while Seal automatically attaches every deployed application to the backend network.
+
+The generated service is encoded into a YAML node and inserted into the existing Compose services map using the application name as the service key.
+
+Got the complete transformation working end to end:
+
+application manifest
+→ decode and validate
+→ load existing compose.yaml
+→ deployment prechecks
+→ render generated service
+→ add service to Compose model
+→ encode updated Compose YAML
+
+First tested the result by writing the updated Compose configuration to stdout. The generated output contained the new application service while preserving the existing Nginx service, ports, volumes and platform networks.
+
+Then started building safe file writing. Instead of writing directly over compose.yaml, Seal creates a temporary Compose file in the same directory, encodes the updated configuration into it, closes it and returns the generated path. Error paths close and remove the temporary file so failed writes do not leave broken configuration behind.
+
+Successfully created a temporary Compose file through the CLI and manually validated it using:
+
+docker compose -f <temporary-file> config --quiet
+
+Docker Compose accepted the generated configuration.
+
+Also learned more Go concepts while implementing this, including io.Reader, io.Writer, interfaces being satisfied through methods, *os.File acting as a writer, named and multiple return values, ignored return values, file handles versus file paths, temporary files, cleanup on error, and why errors should not be overwritten during cleanup.
+
+Current state: Seal can take a valid application manifest and safely generate a Docker Compose configuration containing the new service without touching the real compose.yaml.
+
+Next step is automating Docker Compose validation from Go. After the temporary file passes validation, Seal can safely rename it over the existing compose.yaml.
