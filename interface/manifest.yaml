@@ -3,6 +3,5 @@ image: "ghcr.io/viper6z/pung"
 internal_port: 5000
 exposure_type: public
 allowed_public_routes:
-  - "/"
   - "/pung"
 
