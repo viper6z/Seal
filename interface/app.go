@@ -14,52 +14,52 @@ import (
 func main() {
 
 	if len(os.Args) != 3 {
-		os.Stderr.WriteString("Invalid input, the format is seal validate/deploy <path>\n")
+		os.Stderr.WriteString("invalid input, the format is seal validate/deploy <path>\n")
 		os.Exit(2)
 	}
 
 	if os.Args[1] != "validate" && os.Args[1] != "deploy" {
-		os.Stderr.WriteString("Invalid input, allowed subcommands are: validate/deploy\n")
+		os.Stderr.WriteString("invalid input, allowed subcommands are: validate/deploy\n")
 		os.Exit(2)
 	}
 
 	application, err := loadApplication(os.Args[2])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load application: %v\n", err)
+		fmt.Fprintf(os.Stderr, "failed to load application: %v\n", err)
 		os.Exit(1)
 	}
 
 	if os.Args[1] == "deploy" {
 		compose, err := loadCompose()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load compose file: %v\n", err)
+			fmt.Fprintf(os.Stderr, "failed to load compose file: %v\n", err)
 			os.Exit(1)
 		}
 
 		err = deploymentPreCheck(application, compose)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Precheck failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "precheck failed: %v\n", err)
 			os.Exit(1)
 		}
 
 		node, err := encodeService(renderService(application))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to encode service: %v\n", err)
+			fmt.Fprintf(os.Stderr, "failed to encode service: %v\n", err)
 			os.Exit(1)
 		}
 
 		compose = addServiceToCompose(node, application, compose)
 		tempPath, err := createNewComposeFile(compose)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to create temp file: %v\n", err)
+			fmt.Fprintf(os.Stderr, "failed to create temp file: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Temporary Compose file written to: %s\n", tempPath)
+		fmt.Printf("temporary Compose file written to: %s\n", tempPath)
 
 		if err = validateCompose(tempPath); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			if removeErr := os.Remove(tempPath); removeErr != nil {
-				fmt.Fprintf(os.Stderr, "Failed to remove temporary file: %s\n", removeErr)
+				fmt.Fprintf(os.Stderr, "failed to remove temporary file: %s\n", removeErr)
 			}
 			os.Exit(1)
 		}
@@ -67,7 +67,7 @@ func main() {
 		if err = replaceCompose(tempPath); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to replace compose: %v\n", err)
 			if removeErr := os.Remove(tempPath); removeErr != nil {
-				fmt.Fprintf(os.Stderr, "Failed to remove temporary file: %s\n", removeErr)
+				fmt.Fprintf(os.Stderr, "failed to remove temporary file: %s\n", removeErr)
 			}
 			os.Exit(1)
 		}
@@ -76,6 +76,9 @@ func main() {
 			path, err := createTempNginxConf(application)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "failed to create temporary nginx conf: %s\n", err)
+				if revertErr := composeRevert(); revertErr != nil {
+					fmt.Fprintf(os.Stderr, "failed to revert compose: %s\n", revertErr)
+				}
 				os.Exit(1)
 			}
 			if err = replaceNginxConf(application, path); err != nil {
@@ -83,8 +86,15 @@ func main() {
 				if removeErr := os.Remove(path); removeErr != nil {
 					fmt.Fprintf(os.Stderr, "failed to remove temporary nginx config: %s\n", removeErr)
 				}
+				if revertErr := composeRevert(); revertErr != nil {
+					fmt.Fprintf(os.Stderr, "failed to revert compose: %s\n", revertErr)
+				}
 				os.Exit(1)
 			}
+		}
+		if err = os.Remove("backup.yaml"); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to remove backup for cleanup: %s\n", err)
+			os.Exit(1)
 		}
 	}
 }
@@ -330,8 +340,37 @@ func validateCompose(path string) error {
 }
 
 // replaces old real compose file with new validated compose file
-func replaceCompose(tempPath string) error {
-	if err := os.Rename(tempPath, "compose.yaml"); err != nil {
+func replaceCompose(tempPath string) (err error) {
+	//make sure no stale backup file exist
+	_, statErr := os.Stat("backup.yaml")
+
+	switch {
+	case statErr == nil:
+		return fmt.Errorf("backup.yaml already exists")
+
+	case errors.Is(statErr, os.ErrNotExist):
+		// Expected state. Continue with replacement.
+
+	default:
+		return fmt.Errorf("failed to check for existing backup: %w", statErr)
+	}
+
+	//we rename old one to backup for now
+	if err := os.Rename("compose.yaml", "backup.yaml"); err != nil {
+		return err
+	}
+	if err = os.Rename(tempPath, "compose.yaml"); err != nil {
+		if revertErr := composeRevert(); revertErr != nil {
+			return errors.Join(err, revertErr)
+		}
+		return err
+	}
+	return nil
+}
+
+// used to rollback
+func composeRevert() error {
+	if err := os.Rename("backup.yaml", "compose.yaml"); err != nil {
 		return err
 	}
 	return nil
