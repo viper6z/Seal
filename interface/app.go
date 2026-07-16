@@ -64,39 +64,36 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = replaceCompose(tempPath); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to replace compose: %v\n", err)
-			if removeErr := os.Remove(tempPath); removeErr != nil {
-				fmt.Fprintf(os.Stderr, "failed to remove temporary file: %s\n", removeErr)
-			}
-			os.Exit(1)
-		}
-
-		if application.ExposureType == "public" {
-			path, err := createTempNginxConf(application)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to create temporary nginx conf: %s\n", err)
-				if revertErr := composeRevert(); revertErr != nil {
-					fmt.Fprintf(os.Stderr, "failed to revert compose: %s\n", revertErr)
-				}
-				os.Exit(1)
-			}
-			if err = replaceNginxConf(application, path); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to create real nginx conf: %s\n", err)
-				if removeErr := os.Remove(path); removeErr != nil {
-					fmt.Fprintf(os.Stderr, "failed to remove temporary nginx config: %s\n", removeErr)
-				}
-				if revertErr := composeRevert(); revertErr != nil {
-					fmt.Fprintf(os.Stderr, "failed to revert compose: %s\n", revertErr)
-				}
-				os.Exit(1)
-			}
-		}
-		if err = os.Remove("backup.yaml"); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to remove backup for cleanup: %s\n", err)
+		if err = publishDeployment(tempPath, application); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to publish deployment: %s\n", err)
 			os.Exit(1)
 		}
 	}
+}
+
+// this function takes the temporary compose candidate and the application struct and calls replaceCompose, also if exposure type is public it handles rendering nginx conf
+func publishDeployment(tempPath string, application Application) error {
+	if err := replaceCompose(tempPath); err != nil {
+		removeErr := os.Remove(tempPath)
+		return errors.Join(err, removeErr)
+	}
+	if application.ExposureType == "public" {
+		path, err := createTempNginxConf(application)
+		if err != nil {
+			revertErr := composeRevert()
+			return errors.Join(err, revertErr)
+		}
+		if err = replaceNginxConf(application, path); err != nil {
+			removeErr := os.Remove(path)
+			revertErr := composeRevert()
+
+			return errors.Join(err, removeErr, revertErr)
+		}
+	}
+	if err := os.Remove("backup.yaml"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // struct representing an application
