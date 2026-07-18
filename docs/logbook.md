@@ -1452,4 +1452,4 @@ Also learned more Go concepts while implementing this, including io.Reader, io.W
 
 Current state: Seal can take a valid application manifest and safely generate a Docker Compose configuration containing the new service without touching the real compose.yaml.
 
-Next step is automating Docker Compose validation from Go. After the temporary file passes validation, Seal can safely rename it over the existing compose.yaml.
+Next step is automating Docker Compose validation from Go. After the temporary file passes validation, Seal can safely rename it over the existing compose.yaml.-
