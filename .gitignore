@@ -17,3 +17,5 @@ crash.*.log
 
 interface/interface 
 interface/seal
+
+.seal/
